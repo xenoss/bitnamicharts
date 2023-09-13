@@ -8,7 +8,7 @@ SPDX-License-Identifier: APACHE-2.0
 apiVersion: {{ include "common.capabilities.statefulset.apiVersion" $ }}
 kind: StatefulSet
 metadata:
-  name: {{ printf "%s-shard%d" (include "common.names.fullname" $ ) $i }}
+  name: {{ include "xenoss.clickhouse.names.fullname" ( dict "Shard" $i "Shards" $shards "Root" $ ) }}
   namespace: {{ include "common.names.namespace" $ | quote }}
   labels: {{- include "common.labels.standard" ( dict "customLabels" $.Values.commonLabels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: clickhouse
@@ -200,11 +200,16 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            {{- if or $.Values.auth.password $.Values.auth.existingSecret }}
             - name: CLICKHOUSE_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "clickhouse.secretName" $ }}
                   key: {{ include "clickhouse.secretKey" $ }}
+            {{- else }}
+            - name: ALLOW_EMPTY_PASSWORD
+              value: "yes"
+            {{- end }}
             {{- if $.Values.tls.enabled }}
             - name: CLICKHOUSE_TLS_CERT_FILE
               value: {{ include "clickhouse.tlsCert" $ | quote}}
